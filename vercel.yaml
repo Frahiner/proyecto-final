@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: mi-proyecto-server
+    env: node
+    buildCommand: cd server && npm install && npm run build && cd client
+    startCommand: cd server && npm start && cd client
+    envVars:
+      - key: NODE_ENV
+        value: production
