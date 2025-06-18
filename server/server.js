@@ -1,7 +1,7 @@
 const express = require('express');
-const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -13,10 +13,12 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const DATABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
 if (!DATABASE_URL || !SUPABASE_SERVICE_KEY) {
     console.error("Las variables SUPABASE_URL y SUPABASE_SERVICE_KEY deben estar definidas en el entorno.");
     process.exit(1);
 }
+
 const supabase = createClient(DATABASE_URL, SUPABASE_SERVICE_KEY);
 
 const app = express();
@@ -40,13 +42,13 @@ app.use(limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Crear directorio de uploads si no existe
-const uploadsDir = path.join(__dirname, 'uploads');
+// Para Vercel, usaremos /tmp como directorio temporal
+const uploadsDir = '/tmp/uploads';
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configurar multer para subida de archivos (se mantiene guardando en el sistema de archivos)
+// Configurar multer para subida de archivos
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const userDir = path.join(uploadsDir, req.user.id.toString());
@@ -60,6 +62,7 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + '-' + file.originalname);
     }
 });
+
 const upload = multer({
     storage: storage,
     limits: {
@@ -78,9 +81,6 @@ const upload = multer({
         }
     }
 });
-
-// NOTA: La creación de tablas en Supabase se gestiona mediante migraciones o la consola de Supabase.
-// Por ello, se elimina el bloque de creación de tablas que usaba SQLite.
 
 // Middleware para verificar JWT
 const authenticateToken = (req, res, next) => {
@@ -336,6 +336,12 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto ${PORT}`);
-});
+// Para Vercel, exportamos la app en lugar de usar app.listen()
+module.exports = app;
+
+// Solo para desarrollo local
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Servidor corriendo en el puerto ${PORT}`);
+    });
+}
